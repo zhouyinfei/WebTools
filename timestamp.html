@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Unix时间戳在线转换 - 时间转换工具 - 幻影工具站</title>
+<link rel="icon" href="/img/base64.png" type="image/png">
+<link rel="shortcut icon" href="/img/base64.png">
+<meta name="description" content="支持Unix时间戳（秒/毫秒）与北京时间的在线互转，实时显示当前时间戳，简单易用。">
+<meta name="keywords" content="Unix时间戳,时间戳转换,北京时间转时间戳,在线时间工具">
+
+<div style="position:absolute; left:-9999px;">
+    <h2>Unix时间戳转换工具</h2>
+    <p>轻松实现Unix时间戳与人类可读时间的转换，支持秒(s)和毫秒(ms)单位，是开发中处理日期格式的必备利器。</p>
+</div>
+
+<style>
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    font-family: "Microsoft YaHei", Arial, sans-serif;
+    background: #f4f4f4;
+    color: #333;
+}
+
+/* 页面 */
+.page {
+    max-width: 1200px;
+    margin: 20px auto;
+    background: #fff;
+    border: 1px solid #ddd;
+}
+
+/* 标题 */
+.page-title {
+    padding: 14px 16px;
+    font-size: 16px;
+    font-weight: bold;
+    border-bottom: 1px solid #ddd;
+    position: relative;
+}
+.page-title::after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    background: linear-gradient(
+        to right,
+        #e74c3c,
+        #f1c40f,
+        #2ecc71,
+        #3498db
+    );
+}
+.visual-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+
+
+/* 主体布局 */
+.main {
+    display: flex;
+}
+.left {
+    width: 68%;
+    padding: 20px;
+    border-right: 1px solid #ddd;
+}
+.right {
+    width: 32%;
+    padding: 20px;
+}
+
+/* 卡片 */
+.card {
+    border: 1px solid #ddd;
+    margin-bottom: 20px;
+}
+.card-header {
+    background: #f7f7f7;
+    padding: 10px 12px;
+    font-weight: bold;
+    border-bottom: 1px solid #ddd;
+}
+.card-body { padding: 15px; }
+
+/* 表单 */
+.row { margin-bottom: 10px; }
+label {
+    display: inline-block;
+    width: 90px;
+    font-size: 14px;
+}
+input {
+    width: 220px;
+    padding: 6px;
+    border: 1px solid #ccc;
+}
+
+/* 按钮 */
+button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 13px;
+}
+.btn-blue { background: #337ab7; color: #fff; }
+.btn-green { background: #5cb85c; color: #fff; }
+.btn-red { background: #d9534f; color: #fff; }
+.btn-gray { background: #777; color: #fff; }
+button:hover { opacity: .9; }
+
+/* 结果区 */
+.result {
+    margin-top: 12px;
+    background: #eaf6d3;
+    padding: 10px;
+    line-height: 1.8;
+    font-size: 14px;
+}
+
+/* 右侧时间戳 */
+.timestamp-box {
+    background: #f0ad4e;
+    color: #fff;
+    font-size: 36px;
+    text-align: center;
+    padding: 20px 0;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+.btn-group {
+    text-align: center;
+    margin-bottom: 15px;
+}
+.btn-group button { margin: 0 4px; }
+
+.desc {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.6;
+}
+</style>
+</head>
+
+<body>
+    <h1 class="visual-hidden">Unix时间戳(Timestamp)转换工具 - 毫秒级在线转换</h1>
+    <div id="back-home-bar" style="display:none; background:#eee; padding:5px; font-size:12px; border-bottom:1px solid #ddd;">
+        <a href="index.html" target="_top" style="color:#666; text-decoration:none;">🏠 返回幻影工具站首页</a>
+    </div>
+    
+    <script>
+        // 如果当前页面不是嵌套在 iframe 里（即独立打开），则显示返回首页条
+        if (window.top === window.self) {
+            document.getElementById('back-home-bar').style.display = 'block';
+        }
+    </script>
+<a href="index.html" style="font-size: 1px; color: transparent; position: absolute; text-decoration: none;">幻影工具站首页</a>
+<div class="page">
+    
+    <div class="page-title">时间戳与日期转换</div>
+
+    <div class="main">
+
+        <!-- 左侧 -->
+        <div class="left">
+
+            <!-- 时间戳 → 日期 -->
+            <div class="card">
+                <div class="card-header">时间戳转换为日期</div>
+                <div class="card-body">
+                    <div class="row">
+                        <label>时间戳</label>
+                        <input id="tsInput" placeholder="如：1765612377">
+                        <button class="btn-blue" onclick="tsToDate()">转换</button>
+                    </div>
+                    <div class="result" id="tsToDateResult">—</div>
+                </div>
+            </div>
+
+            <!-- 日期 → 时间戳 -->
+            <div class="card">
+                <div class="card-header">日期转换为时间戳</div>
+                <div class="card-body">
+                    <div class="row">
+                        <label>日期</label>
+                        <input type="date" id="dateInput">
+                    </div>
+                    <div class="row">
+                        <label>时间</label>
+                        <!-- 可选择时间（含秒） -->
+                        <input type="time" id="timeInput" step="1">
+                    </div>
+                    <button class="btn-blue" onclick="dateToTs()">转换</button>
+                    <div class="result" id="dateToTsResult">—</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 右侧 -->
+        <div class="right">
+            <div class="card">
+                <div class="card-header">当前 Unix 时间戳</div>
+                <div class="card-body">
+
+                    <div class="timestamp-box" id="nowTs">—</div>
+
+                    <div class="btn-group">
+                        <button class="btn-gray" id="copyBtn" onclick="copyTs()">复制</button>
+                        <button class="btn-red" onclick="stopClock()">停止</button>
+                        <button class="btn-green" onclick="startClock()">开始</button>
+                    </div>
+
+                    <div class="desc">
+                        时间戳通常指一个特定时间点相对于
+                        1970-01-01 00:00:00 (UTC) 的秒数，
+                        常用于程序中的时间计算。
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+let timer = null;
+
+/* 当前时间戳 */
+window.startClock = function () {
+    if (timer) return;
+    document.getElementById('nowTs').innerText =
+        Math.floor(Date.now() / 1000);
+
+    timer = setInterval(() => {
+        document.getElementById('nowTs').innerText =
+            Math.floor(Date.now() / 1000);
+    }, 1000);
+}
+
+window.stopClock = function () {
+    clearInterval(timer);
+    timer = null;
+}
+
+/* 兼容复制功能 */
+window.copyTs = function () {
+    const text = document.getElementById('nowTs').innerText;
+    if (!text || text === '—') {
+        alert('当前没有可复制的时间戳');
+        return;
+    }
+
+    // 现代浏览器
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+            .then(() => {
+                showCopied();
+            })
+            .catch(err => {
+                console.error(err);
+                fallbackCopy(text);
+            });
+    } else {
+        fallbackCopy(text);
+    }
+}
+
+function showCopied() {
+    const btn = document.getElementById('copyBtn');
+    if (!btn) return;
+
+    const oldText = btn.innerText;
+    btn.innerText = '已复制';
+    btn.disabled = true;
+
+    setTimeout(() => {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }, 3000);
+}
+
+/* 兼容旧浏览器的复制方法 */
+function fallbackCopy(text) {
+    const input = document.createElement('input');
+    input.value = text;
+    document.body.appendChild(input);
+    input.select();
+    input.setSelectionRange(0, 99999); // 手机端兼容
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showCopied();
+        } else {
+            alert('复制失败，请手动复制');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('复制失败，请手动复制');
+    }
+    document.body.removeChild(input);
+}
+
+/* 时间戳 → 日期 */
+window.tsToDate = function () {
+    const ts = document.getElementById('tsInput').value;
+    if (!ts) return;
+
+    const d = new Date(Number(ts) * 1000);
+    if (isNaN(d.getTime())) return;
+
+    document.getElementById('tsToDateResult').innerHTML =
+        `日期：${format(d)}<br>
+         时区：Asia/Shanghai<br>
+         GMT：${d.toString()}`;
+}
+
+/* 日期 → 时间戳 */
+window.dateToTs = function () {
+    const date = document.getElementById('dateInput').value;
+    const time = document.getElementById('timeInput').value || '00:00:00';
+    if (!date) return;
+
+    const d = new Date(date + 'T' + time);
+    if (isNaN(d.getTime())) return;
+
+    const ts = Math.floor(d.getTime() / 1000);
+    document.getElementById('dateToTsResult').innerHTML =
+        `Unix 时间戳：${ts}<br>
+         秒：${ts}<br>
+         毫秒：${ts * 1000}<br>
+         时区：Asia/Shanghai`;
+}
+
+/* 格式化日期 */
+function format(d) {
+    const p = n => n < 10 ? '0' + n : n;
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ` +
+           `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+</script>
+
+</body>
+</html>

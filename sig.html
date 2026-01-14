@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>接口签名生成工具</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f4f4; margin: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
+        h2 { color: #4a4a5f; margin-top: 0; border-bottom: 2px solid #ffaa00; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;}
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: monospace; }
+        button { background-color: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; margin-top: 10px; }
+        button:hover { background-color: #0056b3; }
+        .output-area { margin-top: 20px; }
+        textarea { width: 100%; height: 180px; padding: 10px; background: #272822; color: #f8f8f2; border-radius: 4px; border: none; box-sizing: border-box; font-family: 'Courier New', Courier, monospace; resize: none; }
+        .copy-hint { font-size: 12px; color: #888; margin-top: 5px; text-align: right; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>签名 JSON 生成器</h2>
+    
+    <div class="form-group">
+        <label>UUID:</label>
+        <input type="text" id="uuid" placeholder="例如: 550e8400-e29b-41d4-a716-446655440000">
+    </div>
+
+    <div class="form-group">
+        <label>Token:</label>
+        <input type="text" id="token" placeholder="输入用户的访问令牌">
+    </div>
+
+    <div class="form-group">
+        <label>Channel:</label>
+        <input type="text" id="channel" placeholder="例如: 2001004">
+    </div>
+
+    <button onclick="buildJson()">生成输出 JSON</button>
+
+    <div class="output-area">
+        <label>输出结果 (JSON):</label>
+        <textarea id="resultJson" readonly></textarea>
+        <div class="copy-hint">点击按钮后将自动生成包含 sig 和 ts 的结果</div>
+    </div>
+</div>
+
+<script>
+    // --- 这里是你的 Key 映射关系，请根据实际情况修改 ---
+    const CHANNEL_MAP = {
+        "-3001001": "szcOEWadc;2d-pe#3Ikdl;fn1.7i:klcD42",
+        "1001001":"d95c23f0f!-16a1dda91a20701c2433153%",
+        "1001002":"d95c23f0f!-16a1dda91a20701c2433153%",
+        "1002001":"diujfdb789234hjkaff8+3!#53%",
+        "1002002":"diujfdb789234hjkaff8+3!#53%",
+        "2001001":"0c5269735ed4b129",
+        "2001002":"0c5269735ed4b129",
+        "2001003":"0c5269735ed4b129",
+        "2001004":"0c5269735ed4b129",
+        "2001005":"0c5269735ed4b129",
+        "2001006":"0c5269735ed4b129",
+        "2001007":"03lkhzxdcf6!&*^%)(*32jd4b129",
+        "2001008":"03lkhzxdcf6!&*^%)(*32jd4b129",
+        "2001009":"03lkhzxdcf6!&*^%)$&32j@4b129",
+        "2001010":"03lkhzxdcf6!&*^%)$&32j@4b129",
+        "2001011":"0c5269735ed4b129",
+        "2001012":"0c5269735ed4b129",
+        "2001013":"0c5269735ed4b129",
+        "2001014":"0c5269735ed4b129",
+        "3001001":"0c5269735ed4b129",
+        "3001002":"0c5269735ed4b129",
+        "3001003":"0c5269735ed4b129",
+        "3001004":"0c5269735ed4b129",
+        "3001005":"0c5269735ed4b129",
+        "3001006":"0c5269735ed4b129",
+        "3001007":"03lkhzxdcf6!&*^%)(*32jd4b129",
+        "3001008":"03lkhzxdcf6!&*^%)(*32jd4b129",
+        "3001009":"03lkhzxdcf6!&*^%)$&32j@4b129",
+        "3001010":"03lkhzxdcf6!&*^%)$&32j@4b129",
+        "3001011":"0c5269735ed4b129",
+        "3001012":"0c5269735ed4b129",
+        "3001013":"0c5269735ed4b129",
+        "3001014":"0c5269735ed4b129",
+        "4001001":"0c5269735ed4b129",
+        "4001002":"0c5269735ed4b129",
+        "5001001":"0c5269735ed4b129",
+        "5001002":"0c5269735ed4b129",
+        "6001001":"94f1462c3d114146",
+        "6001002":"94f1462c3d114146",
+        "6001003":"94f1462c3d114146",
+        "6001004":"94f1462c3d114146",
+        "6001005":"94f1462c3d114146",
+        "6001006":"94f1462c3d114146",
+        "6001007":"94f1462c3d114146",
+        "6001008":"94f1462c3d114146",
+        "6001009":"94f1462c3d114146",
+        "6001010":"94f1462c3d114146",
+        "6002001":"755ba3c!7e87$db648",
+        "6002002":"755ba3c!7e87$db648",
+        "6002003":"755ba3c!7e87$db648",
+        "6002004":"755ba3c!7e87$db648",
+        "6002005":"755ba3c!7e87$db648",
+        "6002006":"755ba3c!7e87$db648",
+        "7001001":"4e8ae9c106ef1b034785e43610846ced",
+        "7001002":"3538944ad2c4f59e9915417b0ec0dc81",
+        "7001003":"4e8ae9c106ef1b034785e43610846ced",
+        "7002001":"3538944ad2c4f59e9915417b0ec0dc81",
+        "7002002":"3538944ad2c4f59e9915417b0ec0dc81",
+        "8001001":"51fcdd41f5ec9659__a!",
+        "8001002":"51fcdd41f5ec9659__a!",
+        "8001003":"51fcdd41f5ec9659__a!",
+        "8001004":"51fcdd41f5ec9659__a!",
+        "8001005":"51fcdd41f5ec9659__a!",
+        "8001006":"51fcdd41f5ec9659__a!",
+        "8001007":"51fcdd41f5ec9659__a!",
+        "8001008":"51fcdd41f5ec9659__a!",
+        "11001001":"755ba3c!7e87$db648",
+        "11001002":"755ba3c!7e87$db648",
+        "12001001":"8f58ed24(===+++)2e54a4d9",
+        "12001002":"8f58ed24(===+++)2e54a4d9",
+        "12001003":"8f58ed24(===+++)2e54a4d9",
+        "12001004":"8f58ed24(===+++)2e54a4d9",
+        "12002001": "c02jv82-bb2-a8432f3f3f;lc93",
+        "12002002": "c02jv82-bb2-a8432f3f3f;lc93",
+        "13001001":"!cf55fc#91166bc_566",
+        "13001002":"!cf55fc#91166bc_566",
+        "14001001":"495!39e7a@319d1#1f2",
+        "14001002":"495!39e7a@319d1#1f2",
+        "16001001":"965@39wrtd319e1#1f2",
+        "16001002":"965@39wrtd319e1#1f2",
+        "16001003":"965@39wrtd319e1#1f2",
+        "16001004":"965@39wrtd319e1#1f2",
+        "16001005":"965@39wrtd319e1#1f2",
+        "16001006":"965@39wrtd319e1#1f2",
+        "16001007":"965@39wrtd319e1#1f2",
+        "16001008":"965@39wrtd319e1#1f2",
+        "17001001":"sadlkf8231!^&$@O(!jkhz893xcvbol",
+        "17001002":"sadlkf8231!^&$@O(!jkhz893xcvbol",
+        "17001003":"sadlkf8231!^&$@O(!jkhz893xcvbol",
+        "17001004":"sadlkf8231!^&$@O(!jkhz893xcvbol",
+        "18001001":"89FSDGJd3HKL2347e89FD$1JKL!",
+        "18001002":"89FSDGJd3HKL2347e89FD$1JKL!",
+        "18001003": "89FSDGJd3HKL2347e89FD$1JKL!",
+        "18001004": "89FSDGJd3HKL2347e89FD$1JKL!",
+        "19001001":"sa_+dlkf823p1!^&$r0@O(!jkhpz893x^",
+        "19001002":"sa_+dlkf823p1!^&$r0@O(!jkhpz893x^",
+        "19001003":"sa_+dlkf823p1!^&$r0@O(!jkhpz893x^",
+        "19001004":"sa_+dlkf823p1!^&$r0@O(!jkhpz893x^",
+        "26001001": "39VBCd240)@#&ZX:.M!O!ldv023jmn;",
+        "26001002": "39VBCd240)@#&ZX:.M!O!ldv023jmn;",
+        "26001003": "39VBCd240)@#&ZX:.M!O!ldv023jmn;",
+        "26001004": "39VBCd240)@#&ZX:.M!O!ldv023jmn;",
+        "27001001": "kf823p1!^&$r0@O(!ZXO!ldv023jmn4-",
+        "27001002": "kf823p1!^&$r0@O(!ZXO!ldv023jmn4-",
+        "27001003": "kf823p1!^&$r0@O(!ZXO!ldv023jmn4-",
+        "27001004": "kf823p1!^&$r0@O(!ZXO!ldv023jmn4-",
+        "27001005": "kf823p1!^&$r0@O(!ZXO!ldv023jmn4-",
+        "27001006": "kf823p1!^&$r0@O(!ZXO!ldv023jmn4-",
+        "28001001":"sa-+rh6f8uhf1!^<$r0@1(!jkhpz8a3y^",
+        "28001004":"x1%bra#5ucj7t4jp9!m610t_6+zy*7o7h",
+        "28001002":"t=a+dlkf8b3p1!f&$r0vO(!yk.7zb93xu",
+        "28001003":"p#_+dlkxah3p1!^&$r0*O(!wiffz8^3x9",
+        "29001001":"vd89203bv84;OP)@cdf72ascfb;+))",
+        "29001002":"vd89203bv84;OP)@cdf72ascfb;+))",
+        "29001003": "vd89203bv84;OP)@cdf72ascfb;+))",
+        "29001004": "vd89203bv84;OP)@cdf72ascfb;+))",
+        "29002001": "vd89203bv84;OP)@cdf72ascfb;+))",
+        "29002002": "vd89203bv84;OP)@cdf72ascfb;+))",
+        "30001001": "C9023GHJ;LKhnuydagdhf023=8f!1jhdfef",
+        "30001002": "C9023GHJ;LKhnuydagdhf023=8f!1jhdfef",
+        "30001003": "b9384bhlks)&t3bgl;)(&^%HJLef62?iedf",
+        "30001004": "b9384bhlks)&t3bgl;)(&^%HJLef62?iedf",
+        "32001001": "3fsadg_ag9h;5nm2agdft37aldb0UYF&23f9$@@@",
+        "32001002": "3fsadg_ag9h;5nm2agdft37aldb0UYF&23f9$@@@",
+        "32001003": "3fsadg_ag9h;5nm2agdft37aldb0UYF&23f9$@@@",
+        "32001004": "3fsadg_ag9h;5nm2agdft37aldb0UYF&23f9$@@@",
+        "33001001": "3fsadg_ag9h;5nm2agdft37aldb0UYF&23f9$@@@",
+        "33001002": "3fsadg_ag9h;5nm2agdft37aldb0UYF&23f9$@@@",
+        "33001003": "3fsadg_ag9h;5nm2agdft37aldb0UYF&23f9$@@@",
+        "33001004": "3fsadg_ag9h;5nm2agdft37aldb0UYF&23f9$@@@",
+        "35001001": "c82jUY&282g3laHUd83f!jief;a(*",
+        "35001002": "c82jUY&282g3laHUd83f!jief;a(*",
+        "35001003": "c82jUY&282g3laHUd83f!jief;a(*",
+        "35001004": "c82jUY&282g3laHUd83f!jief;a(*",
+        "72001001": "329he3wihfeibfk3209(&*^%dehsi3)*&",
+        "72001002": "329he3wihfeibfk3209(&*^%dehsi3)*&",
+        "73001001": "329he3wihfeibfk3209(&*^%dehsi3)*&",
+        "73001002": "329he3wihfeibfk3209(&*^%dehsi3)*&",
+        "74001001": "k98&^^^%d7s6NHF*^&)W(hsds12345",
+        "74001002": "k98&^^^%d7s6NHF*^&)W(hsds12345",
+        "74002001": "k98&^^^%d7s6NHF*^&)W(hsds12345",
+        "74002002": "k98&^^^%d7s6NHF*^&)W(hsds12345",
+        "75001001": "k98&^^^%d7s6NHF*^&)W(hsds12345",
+        "75001002": "k98&^^^%d7s6NHF*^&)W(hsds12345",
+        "75002001": "k98&^^^%d7s6NHF*^&)W(hsds12345",
+        "75002002": "k98&^^^%d7s6NHF*^&)W(hsds12345",
+        "78002001": "*(yu56&@#@4#lkGH**78$op43%nmsD2",
+        "78002002":    "*(yu56&@#@4#lkGH**78$op43%nmsD2",
+        "78003001": "*(yu56&@#@4#lkGH**78$op43%nmsD2",
+        "78003002":    "*(yu56&@#@4#lkGH**78$op43%nmsD2",
+        "78004001": "*(yu56&@#@4#lkGH**78$op43%nmsD2",
+        "78004002":    "*(yu56&@#@4#lkGH**78$op43%nmsD2"
+    };
+
+    // MD5 算法核心逻辑
+    function md5(string) {
+        function add32(a, b) { return (a + b) & 0xFFFFFFFF; }
+        function cmn(q, a, b, x, s, t) { a = add32(add32(a, q), add32(x, t)); return add32((a << s) | (a >>> (32 - s)), b); }
+        function ff(a, b, c, d, x, s, t) { return cmn((b & c) | (~b & d), a, b, x, s, t); }
+        function gg(a, b, c, d, x, s, t) { return cmn((b & d) | (c & ~d), a, b, x, s, t); }
+        function hh(a, b, c, d, x, s, t) { return cmn(b ^ c ^ d, a, b, x, s, t); }
+        function ii(a, b, c, d, x, s, t) { return cmn(c ^ (b | ~d), a, b, x, s, t); }
+        function md5cycle(x, k) {
+            let [a, b, c, d] = x;
+            a = ff(a, b, c, d, k[0], 7, -680876936); d = ff(d, a, b, c, k[1], 12, -389564586); c = ff(c, d, a, b, k[2], 17, 606105819); b = ff(b, c, d, a, k[3], 22, -1044525330);
+            a = ff(a, b, c, d, k[4], 7, -176418897); d = ff(d, a, b, c, k[5], 12, 1200080426); c = ff(c, d, a, b, k[6], 17, -1473231341); b = ff(b, c, d, a, k[7], 22, -45705983);
+            a = ff(a, b, c, d, k[8], 7, 1770035416); d = ff(d, a, b, c, k[9], 12, -1958414417); c = ff(c, d, a, b, k[10], 17, -42063); b = ff(b, c, d, a, k[11], 22, -1990404162);
+            a = ff(a, b, c, d, k[12], 7, 1804603682); d = ff(d, a, b, c, k[13], 12, -40341101); c = ff(c, d, a, b, k[14], 17, -1502002290); b = ff(b, c, d, a, k[15], 22, 1236535329);
+            a = gg(a, b, c, d, k[1], 5, -165796510); d = gg(d, a, b, c, k[6], 9, -1069501632); c = gg(c, d, a, b, k[11], 14, 643717713); b = gg(b, c, d, a, k[0], 20, -373897302);
+            a = gg(a, b, c, d, k[5], 5, -701558691); d = gg(d, a, b, c, k[10], 9, 38016083); c = gg(c, d, a, b, k[15], 14, -660478335); b = gg(b, c, d, a, k[4], 20, -405537848);
+            a = gg(a, b, c, d, k[9], 5, 568446438); d = gg(d, a, b, c, k[14], 9, -1019803690); c = gg(c, d, a, b, k[3], 14, -187363961); b = gg(b, c, d, a, k[8], 20, 1163531501);
+            a = gg(a, b, c, d, k[13], 5, -1444681467); d = gg(d, a, b, c, k[2], 9, -51403784); c = gg(c, d, a, b, k[7], 14, 1735328473); b = gg(b, c, d, a, k[12], 20, -1926607734);
+            a = hh(a, b, c, d, k[5], 4, -378558); d = hh(d, a, b, c, k[8], 11, -2022574463); c = hh(c, d, a, b, k[11], 16, 1839030562); b = hh(b, c, d, a, k[14], 23, -35309556);
+            a = hh(a, b, c, d, k[1], 4, -1530992060); d = hh(d, a, b, c, k[4], 11, 1272893353); c = hh(c, d, a, b, k[7], 16, -155497632); b = hh(b, c, d, a, k[10], 23, -1094730640);
+            a = hh(a, b, c, d, k[13], 4, 681279174); d = hh(d, a, b, c, k[0], 11, -358537222); c = hh(c, d, a, b, k[3], 16, -722521979); b = hh(b, c, d, a, k[6], 23, 76029189);
+            a = hh(a, b, c, d, k[9], 4, -640364487); d = hh(d, a, b, c, k[12], 11, -421815835); c = hh(c, d, a, b, k[15], 16, 530742520); b = hh(b, c, d, a, k[2], 23, -995338651);
+            a = ii(a, b, c, d, k[0], 6, -198630844); d = ii(d, a, b, c, k[7], 10, 1126891415); c = ii(c, d, a, b, k[14], 15, -1416354905); b = ii(b, c, d, a, k[5], 21, -57434055);
+            a = ii(a, b, c, d, k[12], 6, 1700485571); d = ii(d, a, b, c, k[3], 10, -1894986606); c = ii(c, d, a, b, k[10], 15, -1051523); b = ii(b, c, d, a, k[1], 21, -2054922799);
+            a = ii(a, b, c, d, k[8], 6, 1873313359); d = ii(d, a, b, c, k[15], 10, -30611744); c = ii(c, d, a, b, k[6], 15, -1560198380); b = ii(b, c, d, a, k[13], 21, 1309151649);
+            a = ii(a, b, c, d, k[4], 6, -145523070); d = ii(d, a, b, c, k[11], 10, -1120210379); c = ii(c, d, a, b, k[2], 15, 718787259); b = ii(b, c, d, a, k[9], 21, -343485551);
+            x[0] = add32(a, x[0]); x[1] = add32(b, x[1]); x[2] = add32(c, x[2]); x[3] = add32(d, x[3]);
+        }
+        function md5blk(s) {
+            let md5blks = [];
+            for (let i = 0; i < 64; i += 4) {
+                md5blks[i >> 2] = s[i] + (s[i + 1] << 8) + (s[i + 2] << 16) + (s[i + 3] << 24);
+            }
+            return md5blks;
+        }
+        function rhex(n) {
+            let s = '';
+            for (let j = 0; j < 4; j++) { s += ('0' + ((n >> (j * 8)) & 0xff).toString(16)).slice(-2); }
+            return s;
+        }
+        const txt = new TextEncoder().encode(string);
+        const n = txt.length;
+        let state = [1732584193, -271733879, -1732584194, 271733878];
+        let i;
+        for (i = 64; i <= n; i += 64) { md5cycle(state, md5blk(txt.subarray(i - 64, i))); }
+        let tail = new Uint8Array(64);
+        tail.set(txt.subarray(i - 64));
+        tail[n % 64] = 0x80;
+        if (n % 64 > 55) { md5cycle(state, md5blk(tail)); tail.fill(0); }
+        const bitLen = n * 8;
+        tail[56] = bitLen & 0xff; tail[57] = (bitLen >>> 8) & 0xff; tail[58] = (bitLen >>> 16) & 0xff; tail[59] = (bitLen >>> 24) & 0xff;
+        md5cycle(state, md5blk(tail));
+        return state.map(rhex).join('');
+    }
+
+    function buildJson() {
+        // 1. 获取输入
+        const uuid = document.getElementById('uuid').value.trim();
+        const token = document.getElementById('token').value.trim();
+        const channel = document.getElementById('channel').value.trim();
+
+        // 校验输入框是否为空
+        if (!uuid || !token || !channel) {
+            alert("错误：请完整填写 uuid, token 和 channel");
+            return;
+        }
+
+        // 2. 检查 channel 是否存在于映射表中
+        // 只有当 channel 确实存在于 CHANNEL_MAP 中时才继续
+        if (!CHANNEL_MAP.hasOwnProperty(channel)) {
+            alert("报错：未找到对应的 Channel 映射配置，请检查输入是否正确。");
+            return; 
+        }
+
+        // 3. 如果校验通过，获取对应的 key
+        const key = CHANNEL_MAP[channel];
+
+        // 4. 获取 ts (ms)
+        const ts = Date.now();
+
+        // 5. 计算签名: token + uuid + channel + ts + key
+        const rawStr = token + uuid + channel + ts + key;
+        const sig = md5(rawStr).toLowerCase();
+
+        // 6. 组装并输出 JSON
+        const resultObj = {
+            "uuid": uuid,
+            "token": token,
+            "channel": channel,
+            "ts": ts,
+            "sig": sig
+        };
+
+        document.getElementById('resultJson').value = JSON.stringify(resultObj, null, 4);
+    }
+</script>
+
+</body>
+</html>

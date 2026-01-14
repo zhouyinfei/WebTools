@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /Base64.html
+Allow: /jsonUtil.html
+Allow: /timestamp.html
+Allow: /diffUtil.html
+
+# 告诉爬虫你的站点地图在哪里
+Sitemap: https://tools.ziyuanzz.online/sitemap.xml

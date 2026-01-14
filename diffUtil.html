@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>文本差异对比工具 | 在线代码比对 - 幻影工具站</title>
+    <link rel="icon" href="/img/base64.png" type="image/png">
+    <link rel="shortcut icon" href="/img/base64.png">
+    <meta name="description" content="在线文本比对工具，快速找出两段文本或代码之间的差异，支持逐行高亮显示，提高校对效率。">
+    <meta name="keywords" content="文本对比,代码比对,在线Diff,文本差异找不同">
+    
+    <div style="position:absolute; left:-9999px;">
+        <h2>在线文本差异对比 (Diff)</h2>
+        <p>通过对比两个输入框中的内容，自动识别增加、删除及修改的字符，适用于代码审核及文档校对。</p>
+    </div>
+    <style>
+        :root {
+            --diff-red-text: #f5222d; 
+            --diff-line-bg: #fff1f0; 
+            --border: #d9d9d9;
+            --line-height: 22px; 
+        }
+
+        body { 
+            font-family: -apple-system, system-ui, sans-serif; 
+            margin: 0; padding: 16px 30px 30px;
+            background: #f0f2f5; color: #333; 
+        }
+
+        .header { 
+            font-size: 16px; font-weight: 600; 
+            margin: 0 auto 12px auto; max-width: 1400px;
+            display: flex; align-items: center;
+        }
+
+        .header-icon { 
+            background: #ff4d4f;
+            color: #fff;
+        
+            width: 22px;          /* ← 固定宽度 */
+            height: 22px;         /* ← 固定高度（正方形） */
+        
+            display: inline-flex; /* ← 居中关键 */
+            align-items: center;
+            justify-content: center;
+        
+            font-size: 14px;
+            border-radius: 5px;
+            margin-right: 8px;
+            flex-shrink: 0;       /* 防止被压缩 */
+        }
+        
+        .container { 
+            display: flex;
+            gap: 25px;
+            height: 620px;      /* ↑ 输入框更高 */
+            max-width: 1400px;
+            margin: 0 auto 16px auto;
+        }
+
+        .box { 
+            flex: 1; display: flex; flex-direction: column; 
+            background: #fff; border: 1px solid var(--border); 
+            border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+        }
+
+        .box-title { 
+            background: #fafafa; padding: 12px 20px; 
+            border-bottom: 1px solid var(--border); 
+            font-size: 14px; color: #555; font-weight: 600;
+        }
+        
+        .editor {
+            flex: 1; padding: 10px 20px;  
+            line-height: var(--line-height);
+            overflow-y: auto; outline: none;
+            font-family: 'Cascadia Code', 'Consolas', monospace; 
+            font-size: 13px; 
+            white-space: pre-wrap; word-break: break-all; color: #262626;
+            background: #fff;
+            /* 隐藏横向滚动条以防干扰同步 */
+            overflow-x: hidden; 
+        }
+
+        .line {
+            padding: 0;
+            height: var(--line-height);
+            line-height: var(--line-height);
+            box-sizing: border-box;
+            margin: 0;
+        }
+
+        .line-diff {
+            background-color: var(--diff-line-bg);
+        }
+
+        .char-diff { 
+            color: var(--diff-red-text); 
+            font-weight: bold;
+        }
+        .visual-hidden {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
+        }
+
+        .btn-bar { 
+            text-align: center;
+            margin-top: 18px;     /* ← 新增：按钮往下 */
+            margin-bottom: 32px;  /* ↓ 略收 */
+        }
+        
+        button { 
+            background: #ff4d4f;
+            color: white;
+            border: none;
+            padding: 10px 48px;   /* ↓ 缩小 */
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;     /* ↓ 缩小 */
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        button:hover { background: #ff7875; transform: translateY(-1px); }
+
+        .hint { font-size: 13px; color: #8c8c8c; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <h1 class="visual-hidden">文本差异对比工具 | 在线代码比对</h1>
+    <div id="back-home-bar" style="display:none; background:#eee; padding:5px; font-size:12px; border-bottom:1px solid #ddd;">
+        <a href="index.html" target="_top" style="color:#666; text-decoration:none;">🏠 返回幻影工具站首页</a>
+    </div>
+    
+    <script>
+        // 如果当前页面不是嵌套在 iframe 里（即独立打开），则显示返回首页条
+        if (window.top === window.self) {
+            document.getElementById('back-home-bar').style.display = 'block';
+        }
+    </script>
+<a href="index.html" style="font-size: 1px; color: transparent; position: absolute; text-decoration: none;">幻影工具站首页</a>
+<div class="header"><span class="header-icon">⇄</span> 文本差异比对工具</div>
+
+<div class="container">
+    <div class="box">
+        <div class="box-title">原始版本 (OLD)</div>
+        <div id="old-editor" class="editor" contenteditable="true" spellcheck="false"></div>
+    </div>
+    <div class="box">
+        <div class="box-title">修改版本 (NEW)</div>
+        <div id="new-editor" class="editor" contenteditable="true" spellcheck="false"></div>
+    </div>
+</div>
+
+<div class="btn-bar">
+    <button onclick="runCompare()">立即比较差异</button>
+    <div class="hint">已启用左右同步滚动。差异行背景全行浅红，差异字符红字。</div>
+</div>
+
+<script>
+    const oldEd = document.getElementById('old-editor');
+    const newEd = document.getElementById('new-editor');
+
+    // --- 同步滚动逻辑 ---
+    let isScrolling = false;
+
+    function syncScroll(el1, el2) {
+        el1.addEventListener('scroll', () => {
+            if (!isScrolling) {
+                isScrolling = true;
+                el2.scrollTop = el1.scrollTop;
+                // 使用定时器防止滚动事件无限循环触发
+                setTimeout(() => { isScrolling = false; }, 50);
+            }
+        });
+    }
+
+    syncScroll(oldEd, newEd);
+    syncScroll(newEd, oldEd);
+
+    // --- 比较逻辑 ---
+    function runCompare() {
+        const textL = oldEd.innerText;
+        const textR = newEd.innerText;
+
+        const linesL = textL.replace(/\r\n/g, '\n').split('\n');
+        const linesR = textR.replace(/\r\n/g, '\n').split('\n');
+
+        const maxLines = Math.max(linesL.length, linesR.length);
+        let htmlL = '';
+        let htmlR = '';
+
+        for (let i = 0; i < maxLines; i++) {
+            const strL = linesL[i] || '';
+            const strR = linesR[i] || '';
+
+            if (strL === strR) {
+                htmlL += `<div class="line">${escape(strL) || '&nbsp;'}</div>`;
+                htmlR += `<div class="line">${escape(strR) || '&nbsp;'}</div>`;
+            } else {
+                const diff = getCharDiff(strL, strR);
+                htmlL += `<div class="line line-diff">${diff.oldHtml || '&nbsp;'}</div>`;
+                htmlR += `<div class="line line-diff">${diff.newHtml || '&nbsp;'}</div>`;
+            }
+        }
+        
+        oldEd.innerHTML = htmlL;
+        newEd.innerHTML = htmlR;
+
+        // 比对后自动重置滚动到顶部
+        oldEd.scrollTop = 0;
+        newEd.scrollTop = 0;
+    }
+
+    function getCharDiff(oldS, newS) {
+        let oHtml = '', nHtml = '';
+        let i = 0, j = 0;
+
+        while (i < oldS.length || j < newS.length) {
+            if (i < oldS.length && j < newS.length && oldS[i] === newS[j]) {
+                oHtml += escape(oldS[i]);
+                nHtml += escape(newS[j]);
+                i++; j++;
+            } else {
+                let found = false;
+                for (let k = 1; k < 15; k++) {
+                    if (i + k < oldS.length && oldS[i + k] === newS[j]) {
+                        oHtml += `<span class="char-diff">${escape(oldS.substring(i, i + k))}</span>`;
+                        i += k; found = true; break;
+                    }
+                    if (j + k < newS.length && oldS[i] === newS[j + k]) {
+                        nHtml += `<span class="char-diff">${escape(newS.substring(j, j + k))}</span>`;
+                        j += k; found = true; break;
+                    }
+                }
+                if (!found) {
+                    if (i < oldS.length) oHtml += `<span class="char-diff">${escape(oldS[i++])}</span>`;
+                    if (j < newS.length) nHtml += `<span class="char-diff">${escape(newS[j++])}</span>`;
+                }
+            }
+        }
+        return { oldHtml: oHtml, newHtml: nHtml };
+    }
+
+    function escape(str) {
+        if(!str) return "";
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // 格式化粘贴
+    document.querySelectorAll('.editor').forEach(ed => {
+        ed.addEventListener('paste', e => {
+            e.preventDefault();
+            const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+            document.execCommand("insertText", false, text);
+        });
+    });
+</script>
+
+</body>
+</html>
